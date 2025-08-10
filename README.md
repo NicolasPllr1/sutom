@@ -69,5 +69,12 @@ Optimization: we should cache every intermediary computation that is O(#potentia
 - another set length
 
 
+### Performance optimizations
+
+- LRU cache: even though self was passed to methods and self 'changed' because
+ self.potential_answers changed with each round, the methods did seem to be cached
+  successfully. [Context from python faq](https://docs.python.org/3/faq/programming.html#id70)
+
+- next: // with threads. But is it possible (GIL issues? ok in 3.13 ?)
 
 

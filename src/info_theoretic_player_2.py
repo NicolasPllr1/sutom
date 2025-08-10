@@ -1,4 +1,5 @@
 from pathlib import Path
+from functools import lru_cache
 import json
 
 from rich import print
@@ -109,7 +110,8 @@ class InfoTheory(player):
         ### compute 'scores'
 
         # compute each letter `entropy-reducing power', i.e. how many potential answer does it eliminates on average (expected value)
-        scores_per_word = {w: self.compute_word_score(w) for w in self.vocab}
+        guess_nb = len(past_guess_results)
+        scores_per_word = {w: self.compute_word_score(w, guess_nb) for w in self.vocab}
 
         # sort
         sorted_scores_per_word = dict(
@@ -133,7 +135,9 @@ class InfoTheory(player):
             f.write(json.dumps(data, indent=2))
         f.close()
 
-    def letter_probablity_at_idx(self, letter: str, idx: int) -> float:
+    ### start term 1
+    @lru_cache()
+    def letter_probablity_at_idx(self, letter: str, idx: int, guess_nb: int) -> float:
         """Compute P(gt[idx] == letter | gt in potential-answers)
 
         This boils down to looking at the frequency of the `letter`
@@ -157,7 +161,17 @@ class InfoTheory(player):
         assert 0 <= p <= 1, "probability should be in [0, 1]"
         return p
 
-    def letter_probablity_not_in_gt(self, letter: str) -> float:
+    @lru_cache
+    def nb_words_different_letter_at_idx(
+        self, letter: str, idx: int, guess_nb: int
+    ) -> int:
+        return len([w for w in self.potential_answers if w[idx] != letter])
+
+    ### end term 1
+
+    ### start term 2
+    @lru_cache
+    def letter_probablity_not_in_gt(self, letter: str, guess_nb: int) -> float:
         assert len(letter) == 1, "letter should be str of length 1"
 
         match_count = sum(1 for w in self.potential_answers if letter not in w)
@@ -166,39 +180,60 @@ class InfoTheory(player):
         assert 0 <= p <= 1, "probability should be in [0, 1]"
         return p
 
-    def letter_probability_incorrect_position(self, letter: str, idx: int) -> float:
+    @lru_cache
+    def nb_words_with_letter(self, letter: str, guess_nb: int) -> int:
+        return len([w for w in self.potential_answers if letter in w])
+
+    ### end term 2
+
+    ### start term 3
+    @lru_cache
+    def letter_probability_incorrect_position(
+        self, letter: str, idx: int, guess_nb: int
+    ) -> float:
         match_count = sum(
             1 for w in self.potential_answers if letter in w and w[idx] != letter
         )
         p = match_count / len(self.vocab)
         return p
 
-    # NOTE: could lru cache 'expensive' functions we may call many times with the same args. But careful with side effects
-    def compute_expected_word_eliminated_by_letter_at_idx(
-        self, letter: str, idx: int
-    ) -> float:
-        p = self.letter_probablity_at_idx(letter, idx)
-
-        nb_words_different_letter_at_idx = len(
-            [w for w in self.potential_answers if w[idx] != letter]
-        )
-        term_perfect_match = p * nb_words_different_letter_at_idx
-
-        nb_words_with_letter = len([w for w in self.potential_answers if letter in w])
-        term_not_in_gt = self.letter_probablity_not_in_gt(letter) * nb_words_with_letter
-
-        term_incorrect_position = self.letter_probability_incorrect_position(
-            letter, idx
-        ) * len(
+    ### end term 3
+    @lru_cache
+    def nb_words_without_letter_or_perfect_match(
+        self, letter: str, idx: int, guess_nb: int
+    ) -> int:
+        return len(
             [w for w in self.potential_answers if letter not in w or w[idx] == letter]
         )
 
+    @lru_cache
+    def compute_expected_word_eliminated_by_letter_at_idx(
+        self, letter: str, idx: int, guess_nb: int
+    ) -> float:
+        ### term 1
+        term_perfect_match = self.letter_probablity_at_idx(
+            letter, idx, guess_nb
+        ) * self.nb_words_different_letter_at_idx(letter, idx, guess_nb)
+
+        ### term 2
+        term_not_in_gt = self.letter_probablity_not_in_gt(
+            letter, guess_nb
+        ) * self.nb_words_with_letter(letter, guess_nb)
+
+        ### term 3
+        term_incorrect_position = self.letter_probability_incorrect_position(
+            letter, idx, guess_nb
+        ) * self.nb_words_without_letter_or_perfect_match(letter, idx, guess_nb)
+
         return term_perfect_match + term_not_in_gt + term_incorrect_position
 
-    def compute_word_score(self, word: str) -> float:
+    def compute_word_score(self, word: str, guess_nb: int) -> float:
         return sum(
             map(
-                self.compute_expected_word_eliminated_by_letter_at_idx,
+                lambda letter,
+                idx: self.compute_expected_word_eliminated_by_letter_at_idx(
+                    letter, idx, guess_nb
+                ),
                 word,
                 count(),
             )
