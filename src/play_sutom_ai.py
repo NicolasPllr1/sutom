@@ -21,11 +21,11 @@ def print_current_state(sutom: SutomFSM, console: Console):
 
 def main():
     console = Console()
-    ground_truth_word = "amour"
+    ground_truth_word = "telephone"
     sutom_game = SutomFSM(ground_truth_word)
 
     with open("data/fr-nouns_filtered_normalized.txt", "r") as f:
-        vocab = [line.strip() for line in f if line.strip()]
+        vocab = list(set([line.strip() for line in f if line.strip()]))
 
     assert ground_truth_word in vocab, (
         "Bad setup: ground-truth word not in the starter vocab"
