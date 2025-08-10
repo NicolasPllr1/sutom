@@ -14,7 +14,9 @@ def filter_vocab_on_size(gt_length: int, vocab: list[str]) -> list[str]:
 
 
 def flatten(list_of_lists):
-    "Flatten one level of nesting."
+    """Flatten one level of nesting.
+    see: https://docs.python.org/3/library/itertools.html#itertools-recipes
+    """
     return chain.from_iterable(list_of_lists)
 
 
@@ -38,9 +40,7 @@ class InfoTheory(player):
         # SECOND - get letters known *not* to be in the gt (bad letters)
         # NOTE: need to this 2nd and use 'good_letters' information
         # to deal with multiplicity
-        letters_not_in_gt, bad_letters = self.get_bad_letters(
-            past_guess_results, good_letters
-        )
+        _, bad_letters = self.get_bad_letters(past_guess_results, good_letters)
 
         ### filter the potential answers
 
@@ -115,11 +115,12 @@ class InfoTheory(player):
 
         bad_letters = [bad_res.letter for bad_res in letters_not_in_gt]
 
-        print(
-            "\n"
-            + f"Letters known to be non-present in the gt ({len(letters_not_in_gt)}): {letters_not_in_gt}"
-            + "\n"
-        )
+        if debug:
+            print(
+                "\n"
+                + f"Letters known to be non-present in the gt ({len(letters_not_in_gt)}): {letters_not_in_gt}"
+                + "\n"
+            )
         return letters_not_in_gt, bad_letters
 
     def filter_if_contains_any_bad_letter(
