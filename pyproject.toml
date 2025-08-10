@@ -11,6 +11,7 @@ dependencies = [
     "ruff>=0.12.7",
     "spacy[apple]>=3.8.7",
     "tqdm>=4.67.1",
+    "unidecode>=1.4.0",
 ]
 
 [dependency-groups]
