@@ -31,27 +31,79 @@ class InfoTheory(player):
 
     def guess(self, past_guess_results: list[GuessResult]) -> str:
         ### identify *good* and *bad* letters from past guesses
+        # TODO: proper handling of multiplicity
+
+        # FIRST - get letters known to be in the gt (good letters)
+        letters_in_gt, good_letters = self.get_good_letters(past_guess_results)
+
+        # SECOND - get letters known *not* to be in the gt (bad letters)
+        # NOTE: need to this 2nd and use 'good_letters' information
+        # to deal with multiplicity
+        letters_not_in_gt, bad_letters = self.get_bad_letters(
+            past_guess_results, good_letters
+        )
+
+        ### filter the potential answers
+
+        # 1) remove if: *contains* letters that are known *not* to be present in the gt
+        self.filter_if_contains_any_bad_letter(bad_letters)
+
+        # 2) remove if: does *not* contain letters that are known to be in the gt and at the correct position if it was a perfect match
+        self.filter_if_does_not_have_all_good_letters_or_at_the_right_place(
+            letters_in_gt
+        )
+
+        if len(self.potential_answers) == 1:
+            return self.potential_answers[0]
+
+        ### compute 'scores'
+        guess_nb = len(past_guess_results)  # for caching purposes
+
+        # compute each letter `entropy-reducing power', i.e. how many potential answer does it eliminates on average (expected value)
+        scores_per_word = {w: self.compute_word_score(w, guess_nb) for w in self.vocab}
+
+        # sort
+        sorted_scores_per_word = dict(
+            sorted(scores_per_word.items(), key=lambda item: item[1], reverse=True)
+        )
+        self.save_scores(sorted_scores_per_word)
+
+        return list(sorted_scores_per_word.items())[0][0]
+
+    def get_good_letters(
+        self, past_guess_results: list[GuessResult], debug: bool = False
+    ) -> tuple[set[LetterResult], list[str]]:
+        def letter_is_in_gt(lres: LetterResult) -> bool:
+            return lres.status != LetterStatus.NOT_FOUND
 
         all_guessed_letter_results = set(
             flatten([guess_res.results for guess_res in past_guess_results])
         )
-
-        # FIRST - get letters known to be in the gt (good letters)
-        def letter_is_in_gt(lres: LetterResult) -> bool:
-            return lres.status != LetterStatus.NOT_FOUND
 
         letters_in_gt = set(
             filter(letter_is_in_gt, all_guessed_letter_results),
         )
 
         good_letters = [good_res.letter for good_res in letters_in_gt]
-        print(
-            f"\nLetters known to be in the gt ({len(letters_in_gt)}): {letters_in_gt}"
+
+        if debug:
+            print(
+                "\n"
+                + f"Letters known to be in the gt ({len(letters_in_gt)}): {letters_in_gt}"
+                + "\n"
+            )
+        return letters_in_gt, good_letters
+
+    def get_bad_letters(
+        self,
+        past_guess_results: list[GuessResult],
+        good_letters: list[str],
+        debug: bool = False,
+    ) -> tuple[set[LetterResult], list[str]]:
+        all_guessed_letter_results = set(
+            flatten([guess_res.results for guess_res in past_guess_results])
         )
 
-        # TODO: proper handling of multiplicity
-
-        # SECOND - get letters known *not* to be in the gt (bad letters)
         def letter_is_not_in_gt(lres: LetterResult) -> bool:
             return (
                 lres.status == LetterStatus.NOT_FOUND
@@ -62,27 +114,35 @@ class InfoTheory(player):
             filter(letter_is_not_in_gt, all_guessed_letter_results),
         )
 
-        print(
-            f"Letters known to be non-present in the gt ({len(letters_not_in_gt)}): {letters_not_in_gt}"
-        )
-
-        ### filter the potential answers
-
-        # 1) remove if: *contains* letters that are known *not* to be present in the gt
         bad_letters = [bad_res.letter for bad_res in letters_not_in_gt]
 
+        print(
+            "\n"
+            + f"Letters known to be non-present in the gt ({len(letters_not_in_gt)}): {letters_not_in_gt}"
+            + "\n"
+        )
+        return letters_not_in_gt, bad_letters
+
+    def filter_if_contains_any_bad_letter(
+        self, bad_letters: list[str], debug: bool = False
+    ):
         def not_a_single_bad_letter(word: str) -> bool:
             return all([letter not in bad_letters for letter in word])
 
-        potential_answers = list(
+        self.potential_answers = list(
             filter(not_a_single_bad_letter, self.potential_answers)
-        )
-        print(
-            f"\nPotential answers - after filter on 'bad' letters presence: {len(potential_answers)}"
-        )
-        print(f"bad letters: {[res.letter for res in letters_not_in_gt]}\n")
+        )  # NOTE: side-effect, change potential_answers in-place
 
-        # 2) remove if: does *not* contain letters that are known to be in the gt and at the correct position if it was a perfect match
+        if debug:
+            print(
+                "\n"
+                + f"Potential answers - after filter on 'bad' letters presence: {len(self.potential_answers)}"
+                + "\n"
+            )
+
+    def filter_if_does_not_have_all_good_letters_or_at_the_right_place(
+        self, letters_in_gt: set[LetterResult], debug: bool = False
+    ):
         def contains_all_good_letters_at_the_right_position(word: str) -> bool:
             return all(
                 [
@@ -93,35 +153,18 @@ class InfoTheory(player):
                 ]
             )
 
-        potential_answers = list(
-            filter(contains_all_good_letters_at_the_right_position, potential_answers)
-        )
+        self.potential_answers = list(
+            filter(
+                contains_all_good_letters_at_the_right_position, self.potential_answers
+            )
+        )  # NOTE: side-effect, change potential_answers in-place
 
-        print(
-            f"Potential answers - after filter on `good` letters abscence: {len(potential_answers)}"
-        )
-        print(f"good letters: {[res.letter for res in letters_in_gt]}")
-
-        self.potential_answers = potential_answers
-
-        if len(potential_answers) == 1:
-            return potential_answers[0]
-
-        ### compute 'scores'
-
-        # compute each letter `entropy-reducing power', i.e. how many potential answer does it eliminates on average (expected value)
-        guess_nb = len(past_guess_results)
-        scores_per_word = {w: self.compute_word_score(w, guess_nb) for w in self.vocab}
-
-        # sort
-        sorted_scores_per_word = dict(
-            sorted(scores_per_word.items(), key=lambda item: item[1], reverse=True)
-        )
-
-        # save scores
-        self.save_scores(sorted_scores_per_word)
-
-        return list(sorted_scores_per_word.items())[0][0]
+        if debug:
+            print(
+                "\n"
+                + f"Potential answers - after filter on `good` letters abscence: {len(self.potential_answers)}"
+                + "\n"
+            )
 
     def save_scores(self, scores: dict[str, float]):
         data = {
@@ -194,7 +237,7 @@ class InfoTheory(player):
         match_count = sum(
             1 for w in self.potential_answers if letter in w and w[idx] != letter
         )
-        p = match_count / len(self.vocab)
+        p = match_count / len(self.potential_answers)
         return p
 
     ### end term 3
@@ -204,7 +247,7 @@ class InfoTheory(player):
     ) -> int:
         return len(
             [w for w in self.potential_answers if letter not in w or w[idx] == letter]
-        )
+        )  # TODO: which is faster/better, len([]) or sum() ? probably len() as its O(1) : https://wiki.python.org/moin/TimeComplexity
 
     @lru_cache
     def compute_expected_word_eliminated_by_letter_at_idx(
@@ -229,12 +272,8 @@ class InfoTheory(player):
 
     def compute_word_score(self, word: str, guess_nb: int) -> float:
         return sum(
-            map(
-                lambda letter,
-                idx: self.compute_expected_word_eliminated_by_letter_at_idx(
-                    letter, idx, guess_nb
-                ),
-                word,
-                count(),
+            self.compute_expected_word_eliminated_by_letter_at_idx(
+                letter, idx, guess_nb
             )
+            for idx, letter in enumerate(word)
         )
