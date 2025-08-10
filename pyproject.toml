@@ -1,0 +1,19 @@
+[project]
+name = "experiments"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pip>=25.2",
+    "pyright>=1.1.403",
+    "rich>=14.1.0",
+    "ruff>=0.12.7",
+    "spacy[apple]>=3.8.7",
+    "tqdm>=4.67.1",
+]
+
+[dependency-groups]
+dev = [
+    "basedpyright>=1.31.1",
+]
