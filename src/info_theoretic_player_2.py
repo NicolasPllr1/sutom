@@ -1,10 +1,9 @@
-from pathlib import Path
-from functools import lru_cache
 import json
+from functools import lru_cache
+from itertools import chain
+from pathlib import Path
 
 from rich import print
-
-from itertools import chain, count
 
 from player import player
 from sutom import GuessResult, LetterResult, LetterStatus

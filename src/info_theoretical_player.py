@@ -1,8 +1,7 @@
+from itertools import chain, count
 from pathlib import Path
 
 from rich import print
-
-from itertools import chain, count
 
 from player import player
 from sutom import GuessResult, LetterResult, LetterStatus

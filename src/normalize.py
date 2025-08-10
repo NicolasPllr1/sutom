@@ -1,4 +1,5 @@
 from pathlib import Path
+
 from unidecode import unidecode
 
 # https://stackoverflow.com/questions/517923/what-is-the-best-way-to-remove-accents-normalize-in-a-python-unicode-string
