@@ -3,7 +3,7 @@ from pathlib import Path
 from rich import print
 from rich.console import Console
 
-from info_theoretical_player import InfoTheory
+from info_theoretic_player_2 import InfoTheory
 from sutom import GuessResult, LetterStatus, SutomFSM
 
 
@@ -24,7 +24,7 @@ def main():
     ground_truth_word = "amour"
     sutom_game = SutomFSM(ground_truth_word)
 
-    with open("data/fr-nouns_filtered.txt", "r") as f:
+    with open("data/fr-nouns_filtered_normalized.txt", "r") as f:
         vocab = [line.strip() for line in f if line.strip()]
 
     assert ground_truth_word in vocab, (
