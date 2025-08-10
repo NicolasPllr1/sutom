@@ -2,77 +2,109 @@ from pathlib import Path
 
 from rich import print
 
+from itertools import chain, count
+
 from player import player
-from sutom import GuessResult, LetterStatus
+from sutom import GuessResult, LetterResult, LetterStatus
 
 
 def filter_vocab_on_size(gt_length: int, vocab: list[str]) -> list[str]:
     return [w for w in vocab if len(w) == gt_length]
 
 
+def flatten(list_of_lists):
+    "Flatten one level of nesting."
+    return chain.from_iterable(list_of_lists)
+
+
 class InfoTheory(player):
     def __init__(self, gt_length: int, vocab: list[str], save_dir: Path):
         self.gt_length = gt_length
         self.vocab = filter_vocab_on_size(gt_length, vocab)
-        self.save_dir = save_dir
+
+        self.potential_answers = self.vocab
+
         save_dir.mkdir(exist_ok=True, parents=True)
+        self.save_dir = save_dir
 
     def guess(self, past_guess_results: list[GuessResult]) -> str:
-        ### filter vocab
+        ### identify *good* and *bad* letters from past guesses
+
         vocab = self.vocab
         print(f"\nOriginal (filtered) vocab size: {len(vocab)}")
 
+        all_guessed_letter_results = set(
+            flatten([guess_res.results for guess_res in past_guess_results])
+        )
+
         # FIRST - get letters known to be in the gt (good letters)
-        letters_in_gt = set()
-        for past_guess in past_guess_results:
-            results = past_guess.results
-            for letter_result in results:
-                if (
-                    letter_result.status != LetterStatus.NOT_FOUND
-                ):  # i.e., perfect match or incorrect position
-                    letters_in_gt.add(letter_result.letter)
+        def letter_is_in_gt(lres: LetterResult) -> bool:
+            return lres.status != LetterStatus.NOT_FOUND
 
-        # SECOND - get letters known *not* to be in the gt (bad letters)
-        # note: second as a letter may be tagged perfect-match once, and then 'not-found'
-        # as it is present say just once in the gt. We don't want to have it in both lists. ONly in the letters_in_gt list of good letters
-        letters_not_in_gt = set()
-        for past_guess in past_guess_results:
-            results = past_guess.results
-            for letter_result in results:
-                if letter_result.status == LetterStatus.NOT_FOUND:
-                    letters_not_in_gt.add(letter_result.letter)
-        # check to remove good letters, cf note above
-        letters_not_in_gt = {
-            letter for letter in letters_not_in_gt if letter not in letters_in_gt
-        }
-
-        # remove if: *contains* letters that are known *not* to be present in the gt
-        vocab = [
-            w
-            for w in vocab
-            if all([guess_letter not in letters_not_in_gt for guess_letter in w])
-        ]
-        print(
-            f"\nLetters known to be non-present in the gt ({len(letters_not_in_gt)}): {letters_not_in_gt}"
+        letters_in_gt = set(
+            map(
+                lambda res: res.letter,
+                filter(letter_is_in_gt, all_guessed_letter_results),
+            )
         )
-        print(
-            f"vocab size - after filter on known bad letters presence: {len(vocab)}\n"
-        )
-
-        # remove if: does *not* contain letters that are known to be in the gt
-        vocab = [
-            w for w in vocab if all([gt_letter in w for gt_letter in letters_in_gt])
-        ]
-        self.vocab = vocab
-
         print(
             f"\nLetters known to be in the gt ({len(letters_in_gt)}): {letters_in_gt}"
         )
-        print(f"vocab-size - after filter on non-present good letters: {len(vocab)}")
 
-        self.vocab = vocab
+        # SECOND - get letters known *not* to be in the gt (bad letters)
+        # NOTE: why second ? because a gt-letter may be identified first as a 'perfect-match',
+        # and after that as 'not-found' in the same guess (if this letter is only present *once* on the gt).
+        # -> We don't want this letter to be in *both* lists: only in 'letters_in_gt' (good letters)
+        def letter_is_not_in_gt(lres: LetterResult) -> bool:
+            return lres.status == LetterStatus.NOT_FOUND
 
-        ### compute each letter `entropy-reducing power', i.e. how many words it eliminates on average (expected value)
+        letters_not_in_gt = set(
+            map(
+                lambda res: res.letter,
+                filter(letter_is_not_in_gt, all_guessed_letter_results),
+            )
+        )
+
+        # check to remove good letters, cf note above
+        letters_not_in_gt = set(
+            filter(
+                lambda bad_letter: bad_letter not in letters_in_gt,
+                letters_not_in_gt,  # bad letter may actually be good
+            )
+        )
+        print(
+            f"\nLetters known to be non-present in the gt ({len(letters_not_in_gt)}): {letters_not_in_gt}"
+        )
+
+        ### filter the potential answers
+
+        # remove if: *contains* letters that are known *not* to be present in the gt
+        def not_a_single_bad_letter(word: str) -> bool:
+            return all([letter not in letters_not_in_gt for letter in word])
+
+        potential_answers = list(filter(not_a_single_bad_letter, vocab))
+        print(
+            f"Potential answers - after filter on 'bad' letters presence: {len(potential_answers)}\n"
+        )
+        self.vocab = potential_answers
+
+        # remove if: does *not* contain letters that are known to be in the gt
+        def contains_all_good_letters(word: str) -> bool:
+            return all([good_letter in word for good_letter in letters_in_gt])
+
+        potential_answers = list(filter(contains_all_good_letters, potential_answers))
+
+        print(
+            f"Potential answers - after filter on `good` letters abscence: {len(vocab)}"
+        )
+
+        self.potential_answers = potential_answers
+
+        self.vocab = potential_answers
+
+        ### compute 'scores'
+
+        # compute each letter `entropy-reducing power', i.e. how many potential answer does it eliminates on average (expected value)
         scores_per_word = {w: self.compute_word_score(w) for w in self.vocab}
 
         # sort
@@ -123,6 +155,7 @@ class InfoTheory(player):
         p = match_count / len(self.vocab)
         return p
 
+    # NOTE: could lru cache 'expensive' functions we may call many times with the same args. But careful of side effects
     def compute_expected_word_eliminated_by_letter_at_idx(
         self, letter: str, idx: int
     ) -> float:
@@ -147,8 +180,9 @@ class InfoTheory(player):
 
     def compute_word_score(self, word: str) -> float:
         return sum(
-            [
-                self.compute_expected_word_eliminated_by_letter_at_idx(letter, idx)
-                for idx, letter in enumerate(word)
-            ]
+            map(
+                self.compute_expected_word_eliminated_by_letter_at_idx,
+                word,
+                count(),
+            )
         )
