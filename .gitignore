@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+# temp save
+save_tmp/
