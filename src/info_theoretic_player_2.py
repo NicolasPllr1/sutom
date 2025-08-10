@@ -10,7 +10,6 @@ from sutom import GuessResult, LetterResult, LetterStatus
 
 
 def filter_vocab_on_size(gt_length: int, vocab: list[str]) -> list[str]:
-    # TODO: handle unicode length problems. Example: 'abbé' -> 'abbe\u0301' => 'length' 4 vs 5 ...
     return [w for w in vocab if len(w) == gt_length]
 
 
@@ -32,9 +31,6 @@ class InfoTheory(player):
     def guess(self, past_guess_results: list[GuessResult]) -> str:
         ### identify *good* and *bad* letters from past guesses
 
-        vocab = self.vocab
-        print(f"\nOriginal (filtered) vocab size: {len(vocab)}")
-
         all_guessed_letter_results = set(
             flatten([guess_res.results for guess_res in past_guess_results])
         )
@@ -52,7 +48,7 @@ class InfoTheory(player):
             f"\nLetters known to be in the gt ({len(letters_in_gt)}): {letters_in_gt}"
         )
 
-        # TODO: proper handling of multiplicity ...
+        # TODO: proper handling of multiplicity
 
         # SECOND - get letters known *not* to be in the gt (bad letters)
         def letter_is_not_in_gt(lres: LetterResult) -> bool:
@@ -187,18 +183,15 @@ class InfoTheory(player):
             [w for w in self.potential_answers if w[idx] != letter]
         )
         term_perfect_match = p * nb_words_different_letter_at_idx
-        # print("Term perfect match: (1):", term_perfect_match)
 
         nb_words_with_letter = len([w for w in self.potential_answers if letter in w])
         term_not_in_gt = self.letter_probablity_not_in_gt(letter) * nb_words_with_letter
-        # print("Term not in gt: (2):", term_not_in_gt)
 
         term_incorrect_position = self.letter_probability_incorrect_position(
             letter, idx
         ) * len(
             [w for w in self.potential_answers if letter not in w or w[idx] == letter]
         )
-        # print("Term incorrect position (3):", term_incorrect_position)
 
         return term_perfect_match + term_not_in_gt + term_incorrect_position
 
