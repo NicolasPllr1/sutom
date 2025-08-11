@@ -40,12 +40,13 @@ def play(
     for iter in range(1, max_iter + 1):
         print_current_state(iter, sutom_game, console)
 
+        # the player comes up with a guess
         guess = player.guess(sutom_game.past_results)
         print_guess(guess, sutom_game.past_results, console)
-
         if bad_guess_length(guess, ground_truth_word, console):
             break
 
+        # the game checks the guess against the ground-truth
         guess_result = sutom_game.guess(guess)
 
         print_guess_outcome(iter, guess_result, sutom_game, console)
