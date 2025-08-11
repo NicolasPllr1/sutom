@@ -2,6 +2,7 @@ from pathlib import Path
 
 from rich.console import Console
 
+from src.human_player import HumanPlayer
 from src.info_theoretic_player_2 import InfoTheory
 from src.play_utils import (
     bad_guess_length,
@@ -12,6 +13,7 @@ from src.play_utils import (
     print_guess,
     print_guess_outcome,
 )
+from src.player import PlayerKind
 from src.sutom import SutomFSM
 
 DATA_DIR = Path("data")
@@ -23,6 +25,7 @@ SAVE_DIR = DATA_DIR / "guess_results"
 def play(
     ground_truth_word: str,
     *,
+    player_kind: PlayerKind,
     vocab_path: Path = VOCAB_PATH,
     max_iter: int = MAX_ITER,
     save_dir: Path = SAVE_DIR,
@@ -36,7 +39,11 @@ def play(
     gt_length = len(ground_truth_word)
 
     # NOTE: the player does *not* know 'ground_truth_word' value !
-    player = InfoTheory(gt_length=gt_length, vocab=vocab, save_dir=save_dir)
+    match player_kind:
+        case PlayerKind.HUMAN:
+            player = HumanPlayer(gt_length=gt_length)
+        case PlayerKind.AI:
+            player = InfoTheory(gt_length=gt_length, vocab=vocab, save_dir=save_dir)
 
     for iter in range(1, max_iter + 1):
         print_current_state(iter, sutom_game, console)
