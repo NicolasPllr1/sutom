@@ -10,4 +10,4 @@ wheels/
 .venv
 
 # temp save
-save_tmp/
+data/guess_results/
