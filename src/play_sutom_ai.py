@@ -14,9 +14,10 @@ from src.play_utils import (
 )
 from src.sutom import SutomFSM
 
-VOCAB_PATH = Path("data") / "fr-nouns_filtered_normalized.txt"
+DATA_DIR = Path("data")
+VOCAB_PATH = DATA_DIR / "vocab" / "fr" / "fr-nouns_filtered_normalized.txt"
 MAX_ITER = 10
-SAVE_DIR = Path("save_tmp")
+SAVE_DIR = DATA_DIR / "guess_results"
 
 
 def play(
@@ -48,7 +49,6 @@ def play(
 
         # the game checks the guess against the ground-truth
         guess_result = sutom_game.guess(guess)
-
         print_guess_outcome(iter, guess_result, sutom_game, console)
 
         if check_success(ground_truth_word, guess, console):
