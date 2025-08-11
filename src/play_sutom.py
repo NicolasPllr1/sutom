@@ -3,7 +3,7 @@ from pathlib import Path
 from rich.console import Console
 
 from src.human_player import HumanPlayer
-from src.info_theoretic_player_2 import InfoTheory
+from src.info_theoretic_player import InfoTheory
 from src.play_utils import (
     bad_guess_length,
     check_success,
