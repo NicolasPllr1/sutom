@@ -28,7 +28,7 @@ class SutomFSM:
         self.gt_word = ground_truth_word
 
         # no prediction yet
-        self.past_results = []
+        self.past_results: list[GuessResult] = []
 
         # current state of prediction
         _state_of_pred: list[LetterStatus] = [

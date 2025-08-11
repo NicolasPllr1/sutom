@@ -3,7 +3,7 @@ from pathlib import Path
 
 from rich import print
 
-from player import player
+from player import Player
 from sutom import GuessResult, LetterResult, LetterStatus
 
 
@@ -16,7 +16,7 @@ def flatten(list_of_lists):
     return chain.from_iterable(list_of_lists)
 
 
-class InfoTheory(player):
+class InfoTheory(Player):
     def __init__(self, gt_length: int, vocab: list[str], save_dir: Path):
         self.gt_length = gt_length
         self.vocab = filter_vocab_on_size(gt_length, vocab)
