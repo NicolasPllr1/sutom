@@ -1,7 +1,7 @@
 from abc import ABC
 from enum import Enum
 
-from src.sutom import GuessResult
+from src.sutom_engine import GuessResult
 
 
 class Player(ABC):

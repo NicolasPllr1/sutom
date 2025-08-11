@@ -6,7 +6,7 @@ from pathlib import Path
 from rich import print
 
 from src.player import Player
-from src.sutom import GuessResult, LetterResult, LetterStatus
+from src.sutom_engine import GuessResult, LetterResult, LetterStatus
 
 
 def filter_vocab_on_size(gt_length: int, vocab: list[str]) -> list[str]:

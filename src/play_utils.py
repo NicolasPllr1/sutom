@@ -2,7 +2,7 @@ from pathlib import Path
 
 from rich.console import Console
 
-from src.sutom import GuessResult, LetterResult, LetterStatus, SutomFSM
+from src.sutom_engine import GuessResult, LetterResult, LetterStatus, SutomFSM
 
 
 def load_input_vocab(vocab_path: Path) -> list[str]:

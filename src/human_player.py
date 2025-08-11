@@ -2,7 +2,7 @@ from rich.console import Console
 from rich.prompt import Prompt
 
 from src.player import Player
-from src.sutom import GuessResult
+from src.sutom_engine import GuessResult
 
 
 class HumanPlayer(Player):

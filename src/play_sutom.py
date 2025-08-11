@@ -14,7 +14,7 @@ from src.play_utils import (
     print_guess_outcome,
 )
 from src.player import PlayerKind
-from src.sutom import SutomFSM
+from src.sutom_engine import SutomFSM
 
 DATA_DIR = Path("data")
 VOCAB_PATH = DATA_DIR / "vocab" / "fr" / "fr-nouns_filtered_normalized.txt"
