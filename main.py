@@ -1,5 +1,4 @@
-from src.play_sutom import play
-from src.player import PlayerKind
+from src import PlayerKind, play
 
 PLAYER_KIND = PlayerKind.AI
 
