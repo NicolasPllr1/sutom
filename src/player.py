@@ -1,7 +1,7 @@
 from abc import ABC
 
-from sutom import GuessResult
+from src.sutom import GuessResult
 
 
-class player(ABC):
+class Player(ABC):
     def guess(self, past_guess_results: list[GuessResult]) -> str: ...
