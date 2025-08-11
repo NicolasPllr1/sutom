@@ -162,7 +162,7 @@ class InfoTheory(Player):
         if debug:
             print(
                 "\n"
-                + f"Potential answers - after filter on `good` letters abscence: {len(self.potential_answers)}"
+                + f"Potential answers - after filter on `good` letters absence: {len(self.potential_answers)}"
                 + "\n"
             )
 
@@ -180,7 +180,7 @@ class InfoTheory(Player):
 
     ### start term 1
     @lru_cache()
-    def letter_probablity_at_idx(self, letter: str, idx: int, guess_nb: int) -> float:
+    def letter_probability_at_idx(self, letter: str, idx: int, guess_nb: int) -> float:
         """Compute P(gt[idx] == letter | gt in potential-answers)
 
         This boils down to looking at the frequency of the `letter`
@@ -214,7 +214,7 @@ class InfoTheory(Player):
 
     ### start term 2
     @lru_cache
-    def letter_probablity_not_in_gt(self, letter: str, guess_nb: int) -> float:
+    def letter_probability_not_in_gt(self, letter: str, guess_nb: int) -> float:
         assert len(letter) == 1, "letter should be str of length 1"
 
         match_count = sum(1 for w in self.potential_answers if letter not in w)
@@ -254,12 +254,12 @@ class InfoTheory(Player):
         self, letter: str, idx: int, guess_nb: int
     ) -> float:
         ### term 1
-        term_perfect_match = self.letter_probablity_at_idx(
+        term_perfect_match = self.letter_probability_at_idx(
             letter, idx, guess_nb
         ) * self.nb_words_different_letter_at_idx(letter, idx, guess_nb)
 
         ### term 2
-        term_not_in_gt = self.letter_probablity_not_in_gt(
+        term_not_in_gt = self.letter_probability_not_in_gt(
             letter, guess_nb
         ) * self.nb_words_with_letter(letter, guess_nb)
 

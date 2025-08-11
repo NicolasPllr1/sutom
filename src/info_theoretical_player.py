@@ -94,7 +94,7 @@ class InfoTheory(Player):
         potential_answers = list(filter(contains_all_good_letters, potential_answers))
 
         print(
-            f"Potential answers - after filter on `good` letters abscence: {len(vocab)}"
+            f"Potential answers - after filter on `good` letters absence: {len(vocab)}"
         )
 
         self.potential_answers = potential_answers
@@ -128,7 +128,7 @@ class InfoTheory(Player):
             f.writelines(lines)
         f.close()
 
-    def letter_probablity_at_idx(self, letter: str, idx: int) -> float:
+    def letter_probability_at_idx(self, letter: str, idx: int) -> float:
         assert len(letter) == 1, "letter should be str of length 1"
         assert 0 <= idx < self.gt_length, (
             "Index should be between 0 (inclusive) and gt-length (exclusive)"
@@ -140,7 +140,7 @@ class InfoTheory(Player):
         assert 0 <= p <= 1, "probability should be in [0, 1]"
         return p
 
-    def letter_probablity_not_in_gt(self, letter: str) -> float:
+    def letter_probability_not_in_gt(self, letter: str) -> float:
         assert len(letter) == 1, "letter should be str of length 1"
 
         match_count = sum(1 for w in self.vocab if letter not in w)
@@ -158,7 +158,7 @@ class InfoTheory(Player):
     def compute_expected_word_eliminated_by_letter_at_idx(
         self, letter: str, idx: int
     ) -> float:
-        p = self.letter_probablity_at_idx(letter, idx)
+        p = self.letter_probability_at_idx(letter, idx)
 
         nb_words_different_letter_at_idx = len(
             [w for w in self.vocab if w[idx] != letter]
@@ -167,7 +167,9 @@ class InfoTheory(Player):
         # print("Term perfect match: (1):", term_perfect_match)
 
         nb_words_with_letter = len([w for w in self.vocab if letter in w])
-        term_not_in_gt = self.letter_probablity_not_in_gt(letter) * nb_words_with_letter
+        term_not_in_gt = (
+            self.letter_probability_not_in_gt(letter) * nb_words_with_letter
+        )
         # print("Term not in gt: (2):", term_not_in_gt)
 
         term_incorrect_position = self.letter_probability_incorrect_position(

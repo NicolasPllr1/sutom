@@ -95,7 +95,7 @@ class SutomFSM:
         gt_letters_list: list[str | None] = list(self.gt_word)
         guess_letters_list: list[str | None] = list(guess)
 
-        # Step 1: Identify PERFECT_MATCHes
+        # Step 1: Identify 'perfect matches'
         # Mark perfect matches and "consume" letters from both lists
         for i in range(len(self.gt_word)):
             if guess_letters_list[i] == gt_letters_list[i]:
