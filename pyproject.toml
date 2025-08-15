@@ -1,7 +1,7 @@
 [project]
-name = "experiments"
+name = "sutom"
 version = "0.1.0"
-description = "Add your description here"
+description = "Implements the 'Sutom' (~ wordle) game, both for human and machines to play"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
