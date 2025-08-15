@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./sutom.png" alt="Sutom game being played"/>
+</p>
+
 # Sutom
 
 This little project is about playing the [sutom](https://sutom.nocle.fr/) game.
