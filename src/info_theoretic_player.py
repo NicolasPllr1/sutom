@@ -76,8 +76,8 @@ class InfoTheory(Player):
         def letter_is_in_gt(lres: LetterResult) -> bool:
             return lres.status != LetterStatus.NOT_FOUND
 
-        all_guessed_letter_results = set(
-            flatten([guess_res.results for guess_res in past_guess_results])
+        all_guessed_letter_results = flatten(
+            guess_res.results for guess_res in past_guess_results
         )
 
         letters_in_gt = set(
@@ -100,8 +100,8 @@ class InfoTheory(Player):
         good_letters: list[str],
         debug: bool = False,
     ) -> tuple[set[LetterResult], list[str]]:
-        all_guessed_letter_results = set(
-            flatten([guess_res.results for guess_res in past_guess_results])
+        all_guessed_letter_results = flatten(
+            guess_res.results for guess_res in past_guess_results
         )
 
         def letter_is_not_in_gt(lres: LetterResult) -> bool:
