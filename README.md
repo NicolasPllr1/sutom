@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="./sutom.png" alt="Sutom game being played"/>
+  <img src="./sutom.png" alt="Sutom game being played" width="400"/>
 </p>
 
 # Sutom
