@@ -10,6 +10,7 @@ from src.sutom_engine import GuessResult, LetterResult, LetterStatus
 
 
 def filter_vocab_on_size(gt_length: int, vocab: list[str]) -> list[str]:
+    "Filter the input vocab for words matching the 'ground-truth' word length"
     return [w for w in vocab if len(w) == gt_length]
 
 
@@ -31,33 +32,33 @@ class InfoTheory(Player):
         self.save_dir = save_dir
 
     def guess(self, past_guess_results: list[GuessResult]) -> str:
-        ### identify *good* and *bad* letters from past guesses
-        # TODO: proper handling of multiplicity
+        ### Identify _good_ and _bad_ letters from past guesses
 
-        # FIRST - get letters known to be in the gt (good letters)
+        # 1. Get good letters (letters known to be in the gt)
         letters_in_gt, good_letters = self.get_good_letters(past_guess_results)
 
-        # SECOND - get letters known *not* to be in the gt (bad letters)
-        # NOTE: need to this 2nd and use 'good_letters' information
-        # to deal with multiplicity
+        # 2. Get bad letters (letters known _not_ to be in the gt)
+        # Note that this needs to be done _second_  as it uses the 'good_letters' information
+        # to deal with 'multiplicity'
         _, bad_letters = self.get_bad_letters(past_guess_results, good_letters)
 
-        ### filter the potential answers
+        ### filter the pool of potential answers
 
-        # 1) remove if: *contains* letters that are known *not* to be present in the gt
-        self.filter_if_contains_any_bad_letter(bad_letters)
+        # Remove a candidate if it:
 
-        # 2) remove if: does *not* contain letters that are known to be in the gt and at the correct position if it was a perfect match
-        self.filter_if_does_not_have_all_good_letters_or_at_the_right_place(
-            letters_in_gt
-        )
+        # 1) contains any _bad_ letters
+        self.filter_on_bad_letter(bad_letters)
 
+        # 2) does not contain all _good_ letters OR does not contain them at the correct positions if they were perfect matches
+        self.filter_on_good_letters(letters_in_gt)
+
+        # Early return if the pool of candidates has been reduced to a single word!
         if len(self.potential_answers) == 1:
             return self.potential_answers[0]
 
-        ### compute 'scores'
-        guess_nb = len(past_guess_results)  # for caching purposes
+        ### Compute 'scores' (approximation of the expected #candidates a guess will eliminate)
 
+        guess_nb = len(past_guess_results)  # for caching purposes
         # compute each letter `entropy-reducing power', i.e. how many potential answer does it eliminates on average (expected value)
         scores_per_word = {w: self.compute_word_score(w, guess_nb) for w in self.vocab}
 
@@ -123,9 +124,12 @@ class InfoTheory(Player):
             )
         return letters_not_in_gt, bad_letters
 
-    def filter_if_contains_any_bad_letter(
-        self, bad_letters: list[str], debug: bool = False
-    ):
+    def filter_on_bad_letter(self, bad_letters: list[str], debug: bool = False):
+        """
+        Filter the pool of potential answers by removing candidates which contain
+        at least one known _bad_ letter.
+        """
+
         def not_a_single_bad_letter(word: str) -> bool:
             return all([letter not in bad_letters for letter in word])
 
@@ -140,9 +144,16 @@ class InfoTheory(Player):
                 + "\n"
             )
 
-    def filter_if_does_not_have_all_good_letters_or_at_the_right_place(
+    def filter_on_good_letters(
         self, letters_in_gt: set[LetterResult], debug: bool = False
     ):
+        """
+        Filter the pool of potential answers by removing candidates which either:
+
+        - do not contain all the known _good_ letters
+        - OR do not contain them at the correct positions if they were a perfect matches.
+        """
+
         def contains_all_good_letters_at_the_right_position(word: str) -> bool:
             return all(
                 [
@@ -181,10 +192,11 @@ class InfoTheory(Player):
     ### start term 1
     @lru_cache()
     def letter_probability_at_idx(self, letter: str, idx: int, guess_nb: int) -> float:
-        """Compute P(gt[idx] == letter | gt in potential-answers)
+        """Compute P(gt[idx] == letter | gt in potential-answers),
+        where 'gt' is the ground-truth word.
 
         This boils down to looking at the frequency of the `letter`
-        in the current pool of 'self.potential_answers'.
+        being at position 'idx' in the current pool of 'self.potential_answers'.
 
         The current pool of potential answers is a sub-set of the
         initial vocabulary. As guesses are made and information is
@@ -253,17 +265,25 @@ class InfoTheory(Player):
     def compute_expected_word_eliminated_by_letter_at_idx(
         self, letter: str, idx: int, guess_nb: int
     ) -> float:
-        ### term 1
+        """
+        Expected number of words eliminated by a single letter at
+        position "idx". This expectation is the sum of 3 terms
+        corresponding to the 3 possible situations:
+        - the letter at 'idx' is a perfect match
+        - the letter is not found in the ground-truth word
+        - the letter is in the ground-truth word, but not at
+        position 'idx'
+
+        See the accompanying info_theoretic_player.md for more information.
+        """
         term_perfect_match = self.letter_probability_at_idx(
             letter, idx, guess_nb
         ) * self.nb_words_different_letter_at_idx(letter, idx, guess_nb)
 
-        ### term 2
         term_not_in_gt = self.letter_probability_not_in_gt(
             letter, guess_nb
         ) * self.nb_words_with_letter(letter, guess_nb)
 
-        ### term 3
         term_incorrect_position = self.letter_probability_incorrect_position(
             letter, idx, guess_nb
         ) * self.nb_words_without_letter_or_perfect_match(letter, idx, guess_nb)
